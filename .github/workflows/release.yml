@@ -1,0 +1,196 @@
+name: Release Flutter App
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  build-android:
+    name: Build Android APK
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Analyze
+        run: flutter analyze
+
+      - name: Test
+        run: flutter test
+
+      - name: Build APK
+        run: flutter build apk --release --split-per-abi
+
+      - name: Rename APKs
+        run: |
+          mkdir -p release
+          cp build/app/outputs/flutter-apk/app-armeabi-v7a-release.apk release/college-study-supervisor-android-armeabi-v7a.apk
+          cp build/app/outputs/flutter-apk/app-arm64-v8a-release.apk release/college-study-supervisor-android-arm64-v8a.apk
+          cp build/app/outputs/flutter-apk/app-x86_64-release.apk release/college-study-supervisor-android-x86_64.apk
+
+      - name: Upload Android artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-apk
+          path: release/*.apk
+
+  build-linux:
+    name: Build Linux Desktop
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Linux dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ninja-build libgtk-3-dev zip
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Enable Linux desktop
+        run: flutter config --enable-linux-desktop
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Build Linux
+        run: flutter build linux --release
+
+      - name: Package Linux
+        run: |
+          mkdir -p release
+          cd build/linux/x64/release
+          zip -r ../../../../release/college-study-supervisor-linux-x64.zip bundle
+
+      - name: Upload Linux artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-desktop
+          path: release/*.zip
+
+  build-web:
+    name: Build Chrome Web
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Build Web
+        run: flutter build web --release
+
+      - name: Package Web
+        run: |
+          mkdir -p release
+          cd build/web
+          zip -r ../../release/college-study-supervisor-web.zip .
+
+      - name: Upload Web artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: chrome-web
+          path: release/*.zip
+
+  create-release:
+    name: Create GitHub Release
+    runs-on: ubuntu-latest
+    needs:
+      - build-android
+      - build-linux
+      - build-web
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download Android artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: android-apk
+          path: release
+
+      - name: Download Linux artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: linux-desktop
+          path: release
+
+      - name: Download Web artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: chrome-web
+          path: release
+
+      - name: List release files
+        run: ls -lh release
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "${GITHUB_REF_NAME}" release/* \
+            --title "大学生学习监督 App ${GITHUB_REF_NAME}" \
+            --notes "## 大学生学习监督 App ${GITHUB_REF_NAME}
+
+          本次 Release 自动构建以下平台：
+
+          - Android APK
+          - Linux x64 桌面版
+          - Chrome/Web 版
+
+          ### Android 安装建议
+
+          普通手机优先下载：
+
+          \`college-study-supervisor-android-arm64-v8a.apk\`
+
+          ### Linux 运行方式
+
+          下载：
+
+          \`college-study-supervisor-linux-x64.zip\`
+
+          解压后进入 bundle 目录，运行主程序。
+
+          ### Web 版
+
+          下载：
+
+          \`college-study-supervisor-web.zip\`
+
+          可部署到任意静态网站服务。"
