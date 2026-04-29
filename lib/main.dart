@@ -252,7 +252,7 @@ class _StudyHomePageState extends State<StudyHomePage> {
                     ),
                     const SizedBox(height: 12),
                     DropdownButtonFormField<StudyTaskType>(
-                      value: type,
+                      initialValue: type,
                       decoration: const InputDecoration(labelText: '任务类型'),
                       items: StudyTaskType.values.map((item) {
                         return DropdownMenuItem(
@@ -558,7 +558,7 @@ class _DashboardPage extends StatelessWidget {
                   onSelected: (_) => onCourseSelected(course),
                 );
               },
-              separatorBuilder: (_, __) => const SizedBox(width: 8),
+              separatorBuilder: (context, index) => const SizedBox(width: 8),
               itemCount: courses.length,
             ),
           ),
@@ -646,7 +646,7 @@ class _SupervisorHeroCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('今天：$todayKey', style: TextStyle(color: scheme.onPrimaryContainer.withOpacity(0.78))),
+            Text('今天：$todayKey', style: TextStyle(color: scheme.onPrimaryContainer.withValues(alpha: 0.78))),
             const SizedBox(height: 10),
             Text(
               status,
@@ -728,7 +728,7 @@ class _MiniMetric extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: scheme.surface.withOpacity(0.55),
+        color: scheme.surface.withValues(alpha: 0.55),
         borderRadius: BorderRadius.circular(18),
       ),
       child: Column(
@@ -945,7 +945,7 @@ class _FocusPageState extends State<_FocusPage> {
                         painter: RingProgressPainter(
                           progress: value,
                           color: scheme.primary,
-                          backgroundColor: scheme.surface.withOpacity(0.6),
+                          backgroundColor: scheme.surface.withValues(alpha: 0.6),
                         ),
                         child: Center(
                           child: Column(
